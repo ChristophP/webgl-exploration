@@ -8,6 +8,7 @@ import AnimationFrame
 import Color exposing (Color)
 import Html exposing (Html)
 import Html.Attributes exposing (height, style, width)
+import Keyboard
 import Math.Matrix4 as Mat4 exposing (Mat4)
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 import Time exposing (Time)
@@ -17,32 +18,85 @@ import WebGL exposing (Mesh, Shader)
 
 type alias Model =
     { theta : Float
+    , keys : Keys
+    , offset : Vec3
+    }
+
+
+type alias Keys =
+    { left : Bool
+    , right : Bool
+    , up : Bool
+    , down : Bool
     }
 
 
 type Msg
-    = FrameDiff Float
+    = Animate Float
+    | KeyChange Bool Keyboard.KeyCode
 
 
 main : Program Never Model Msg
 main =
     Html.program
-        { init = ( Model 0, Cmd.none )
+        { init = init
         , view = view
-        , subscriptions = \_ -> AnimationFrame.diffs FrameDiff
+        , subscriptions = subscriptions
         , update = update
         }
+
+
+init : ( Model, Cmd Msg )
+init =
+    { theta = 0
+    , keys = Keys False False False False
+    , offset = vec3 0 0 0
+    }
+        => Cmd.none
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    Sub.batch
+        [ AnimationFrame.diffs Animate
+        , Keyboard.downs (KeyChange True)
+        , Keyboard.ups (KeyChange False)
+        ]
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        FrameDiff dt ->
-            ( { theta = model.theta + dt / 5000 }, Cmd.none )
+        Animate dt ->
+            { model
+                | theta = model.theta + dt / 5000
+                , offset =
+                    directionFromKeys model.keys
+                        |> Vec3.scale (dt / 200)
+                        |> Vec3.add model.offset
+            }
+                => Cmd.none
+
+        KeyChange pressed code ->
+            { model | keys = keyFunc pressed code model.keys } => Cmd.none
+
+
+directionFromKeys : Keys -> Vec3
+directionFromKeys { left, right, up, down } =
+    let
+        direction a b =
+            if a == b then
+                0
+            else if a then
+                -1
+            else
+                1
+    in
+    vec3 (direction left right) 0 (direction up down)
 
 
 view : Model -> Html Msg
-view { theta } =
+view { theta, offset } =
     WebGL.toHtml
         [ width 400
         , height 400
@@ -57,7 +111,7 @@ view { theta } =
             vertexShader
             fragmentShader
             cubeMesh
-            (uniforms theta)
+            (uniforms theta offset)
         ]
 
 
@@ -66,11 +120,12 @@ type alias Uniforms =
     , perspective : Mat4
     , camera : Mat4
     , shade : Float
+    , translation : Mat4
     }
 
 
-uniforms : Float -> Uniforms
-uniforms theta =
+uniforms : Float -> Vec3 -> Uniforms
+uniforms theta offset =
     { rotation =
         Mat4.mul
             (Mat4.makeRotate (3 * theta) (vec3 0 1 0))
@@ -78,6 +133,7 @@ uniforms theta =
     , perspective = Mat4.makePerspective 45 1 0.01 100
     , camera = Mat4.makeLookAt (vec3 0 0 5) (vec3 0 0 0) (vec3 0 1 0)
     , shade = 0.8
+    , translation = Mat4.makeTranslate offset
     }
 
 
@@ -163,13 +219,33 @@ vertexShader =
         uniform mat4 perspective;
         uniform mat4 camera;
         uniform mat4 rotation;
+        uniform mat4 translation;
         varying vec3 vcolor;
         void main () {
-            gl_Position = perspective * camera * rotation * vec4(position, 1.0);
+            gl_Position = perspective * camera * translation * rotation * vec4(position, 1.0);
             vcolor = color;
         }
 
     |]
+
+
+keyFunc : Bool -> Keyboard.KeyCode -> Keys -> Keys
+keyFunc on keyCode keys =
+    case keyCode of
+        37 ->
+            { keys | left = on }
+
+        39 ->
+            { keys | right = on }
+
+        38 ->
+            { keys | up = on }
+
+        40 ->
+            { keys | down = on }
+
+        _ ->
+            keys
 
 
 fragmentShader : Shader {} Uniforms { vcolor : Vec3 }
