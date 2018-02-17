@@ -1,0 +1,46 @@
+<%
+    const {
+      files,
+      options: {
+        data: DATA,
+      }
+    } = htmlWebpackPlugin;
+
+%>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=yes,minimal-ui" />
+    <meta name="HandheldFriendly" content="True" />
+    <meta name="MobileOptimized" content="320" />
+    <meta http-equiv="cleartype" content="on" />
+
+    <title>Elm Docs Preview</title>
+
+    <link rel="apple-touch-icon" sizes="76x76" href="/app-icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/app-icons/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/app-icons/favicon-16x16.png">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="mask-icon" href="/app-icons/safari-pinned-tab.svg" color="#5bbad5">
+    <link href="https://fonts.googleapis.com/css?family=Great+Vibes" rel="stylesheet">
+    <meta name="theme-color" content="#ffffff">
+
+    <!-- TODO: maybe self host these assets -->
+    <link rel="stylesheet" href="http://package.elm-lang.org/assets/highlight/styles/default.css?1495720958">
+<style>
+body {
+  background-color: #dedede;
+}
+</style>
+
+    <script src="http://package.elm-lang.org/assets/highlight/highlight.pack.js?1495720958"></script>
+  </head>
+  <body>
+    <script>
+      // start app
+      Elm.Main.fullscreen(<%= JSON.stringify(DATA) %>)
+    </script>
+  </body>
+</html>
