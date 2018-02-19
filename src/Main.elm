@@ -95,6 +95,25 @@ directionFromKeys { left, right, up, down } =
     vec3 (direction left right) 0 (direction up down)
 
 
+keyFunc : Bool -> Keyboard.KeyCode -> Keys -> Keys
+keyFunc on keyCode keys =
+    case keyCode of
+        37 ->
+            { keys | left = on }
+
+        39 ->
+            { keys | right = on }
+
+        38 ->
+            { keys | up = on }
+
+        40 ->
+            { keys | down = on }
+
+        _ ->
+            keys
+
+
 view : Model -> Html Msg
 view { theta, offset } =
     WebGL.toHtml
@@ -227,25 +246,6 @@ vertexShader =
         }
 
     |]
-
-
-keyFunc : Bool -> Keyboard.KeyCode -> Keys -> Keys
-keyFunc on keyCode keys =
-    case keyCode of
-        37 ->
-            { keys | left = on }
-
-        39 ->
-            { keys | right = on }
-
-        38 ->
-            { keys | up = on }
-
-        40 ->
-            { keys | down = on }
-
-        _ ->
-            keys
 
 
 fragmentShader : Shader {} Uniforms { vcolor : Vec3 }
