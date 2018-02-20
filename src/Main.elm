@@ -11,6 +11,8 @@ import Html.Attributes exposing (height, style, width)
 import Keyboard
 import Math.Matrix4 as Mat4 exposing (Mat4)
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
+import OBJ
+import OBJ.Types as OT
 import Time exposing (Time)
 import Util exposing ((=>))
 import WebGL exposing (Mesh, Shader)
@@ -20,6 +22,7 @@ type alias Model =
     { theta : Float
     , keys : Keys
     , offset : Vec3
+    , mesh : Mesh Vertex
     }
 
 
@@ -32,8 +35,9 @@ type alias Keys =
 
 
 type Msg
-    = Animate Float
+    = Animate Time
     | KeyChange Bool Keyboard.KeyCode
+    | MeshLoaded (Result String (OT.MeshWith OT.Vertex))
 
 
 main : Program Never Model Msg
@@ -50,9 +54,10 @@ init : ( Model, Cmd Msg )
 init =
     { theta = 0
     , keys = Keys False False False False
-    , offset = vec3 0 0 0
+    , offset = vec3 0 -1 -4
+    , mesh = WebGL.points []
     }
-        => Cmd.none
+        => OBJ.loadMeshWithoutTexture "/src/Pot.obj" MeshLoaded
 
 
 subscriptions : Model -> Sub Msg
@@ -79,6 +84,18 @@ update msg model =
 
         KeyChange pressed code ->
             { model | keys = keyFunc pressed code model.keys } => Cmd.none
+
+        MeshLoaded result ->
+            case result of
+                Ok mesh ->
+                    let
+                        verts =
+                            List.map (\{ position } -> { position = position, color = vec3 0.5 0.5 0.5 }) mesh.vertices
+                    in
+                    { model | mesh = WebGL.indexedTriangles verts mesh.indices } => Cmd.none
+
+                Err _ ->
+                    model => Cmd.none
 
 
 directionFromKeys : Keys -> Vec3
@@ -115,7 +132,7 @@ keyFunc on keyCode keys =
 
 
 view : Model -> Html Msg
-view { theta, offset } =
+view { theta, offset, mesh } =
     WebGL.toHtml
         [ width 400
         , height 400
@@ -129,7 +146,7 @@ view { theta, offset } =
         [ WebGL.entity
             vertexShader
             fragmentShader
-            cubeMesh
+            mesh
             (uniforms theta offset)
         ]
 
@@ -145,10 +162,9 @@ type alias Uniforms =
 
 uniforms : Float -> Vec3 -> Uniforms
 uniforms theta offset =
-    { rotation =
-        Mat4.mul
-            (Mat4.makeRotate (3 * theta) (vec3 0 1 0))
-            (Mat4.makeRotate (2 * theta) (vec3 1 0 0))
+    { rotation = Mat4.makeRotate (3 * theta) (vec3 0 1 0)
+
+    --(Mat4.makeRotate (2 * theta) (vec3 1 0 0))
     , perspective = Mat4.makePerspective 45 1 0.01 100
     , camera = Mat4.makeLookAt (vec3 0 0 5) (vec3 0 0 0) (vec3 0 1 0)
     , shade = 0.8
