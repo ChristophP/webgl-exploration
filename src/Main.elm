@@ -6,7 +6,7 @@ module Main exposing (main)
 
 import AnimationFrame
 import Color exposing (Color)
-import Html exposing (Html)
+import Html exposing (Html, div, text)
 import Html.Attributes exposing (height, style, width)
 import Keyboard
 import Math.Matrix4 as Mat4 exposing (Mat4)
@@ -20,6 +20,7 @@ import WebGL exposing (Mesh, Shader)
 
 type alias Model =
     { theta : Float
+    , fps : Float
     , keys : Keys
     , offset : Vec3
     , mesh : Mesh Vertex
@@ -53,6 +54,7 @@ main =
 init : ( Model, Cmd Msg )
 init =
     { theta = 0
+    , fps = 0
     , keys = Keys False False False False
     , offset = vec3 0 -1 -4
     , mesh = WebGL.points []
@@ -75,6 +77,7 @@ update msg model =
         Animate dt ->
             { model
                 | theta = model.theta + dt / 5000
+                , fps = 1000 / dt
                 , offset =
                     directionFromKeys model.keys
                         |> Vec3.scale (dt / 200)
@@ -132,22 +135,25 @@ keyFunc on keyCode keys =
 
 
 view : Model -> Html Msg
-view { theta, offset, mesh } =
-    WebGL.toHtml
-        [ width 400
-        , height 400
-        , style
-            [ "display" => "block"
-            , "border" => "1px solid black"
-            , "background-color" => "white"
-            , "margin" => "auto"
+view { theta, offset, mesh, fps } =
+    div []
+        [ div [] [ text <| "FPS: " ++ toString fps ]
+        , WebGL.toHtml
+            [ width 400
+            , height 400
+            , style
+                [ "display" => "block"
+                , "border" => "1px solid black"
+                , "background-color" => "white"
+                , "margin" => "auto"
+                ]
             ]
-        ]
-        [ WebGL.entity
-            vertexShader
-            fragmentShader
-            mesh
-            (uniforms theta offset)
+            [ WebGL.entity
+                vertexShader
+                fragmentShader
+                mesh
+                (uniforms theta offset)
+            ]
         ]
 
 
